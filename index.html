@@ -1,48 +1,125 @@
 <!doctype html>
 <html lang="el">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<title>POWERGRID</title>
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>POWERGRID</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div class="app">
-  <header><div class="logo">POWERGRID</div><div id="roleBadge" class="badge">ΕΚΤΟΣ ΣΥΝΔΕΣΗΣ</div></header>
+  <main class="app">
+    <header class="top">
+      <div>
+        <div class="brand">POWERGRID</div>
+        <div class="sub">Εργατοώρες • Παρουσίες • Υπερωρίες</div>
+      </div>
+      <button id="logoutBtn" class="ghost hidden">Έξοδος</button>
+    </header>
 
-  <main id="login">
-    <div class="card hero">
+    <section id="configWarning" class="card warning hidden">
+      <b>Χρειάζεται σύνδεση με Supabase.</b>
+      <p>Άνοιξε το αρχείο <code>supabase-config.js</code> και βάλε το Project URL και το Publishable/Anon key του δικού σου Supabase project.</p>
+    </section>
+
+    <section id="authView" class="card">
       <h1>Σύνδεση</h1>
-      <p>Εργασία • Παρουσίες • Υπερωρίες • Άδειες</p>
-      <input id="username" placeholder="Όνομα χρήστη" autocomplete="username">
-      <input id="password" type="password" placeholder="Κωδικός" autocomplete="current-password">
-      <button onclick="login()">Σύνδεση</button>
-      <small>Η έκδοση αυτή είναι έτοιμη να συνδεθεί με κοινή online βάση δεδομένων.</small>
+      <p class="muted">Μπες στον λογαριασμό σου στο POWERGRID.</p>
+      <label>Username / Email</label>
+      <input id="email" type="email" autocomplete="username" placeholder="email">
+      <label>Κωδικός</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="κωδικός">
+      <button id="loginBtn" class="primary">Σύνδεση</button>
+      <button id="signupBtn" class="secondary">Δημιουργία λογαριασμού εργαζομένου</button>
+      <button id="resetBtn" class="linkBtn">Ξέχασα τον κωδικό</button>
+      <div id="authMsg" class="msg"></div>
+    </section>
+
+    <section id="workerView" class="hidden">
+      <div class="card">
+        <div class="row between">
+          <div>
+            <h2 id="workerName">Εργαζόμενος</h2>
+            <span id="workerRole" class="pill">Εργαζόμενος</span>
+          </div>
+          <div id="todayStatus" class="status">—</div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <button id="arriveBtn" class="action green">✓ Ήρθα στη δουλειά</button>
+        <button id="leaveReqBtn" class="action blue">📅 Ζητάω ρεπό</button>
+        <button id="vacationReqBtn" class="action orange">🏖 Ζητάω άδεια</button>
+        <button id="overtimeBtn" class="action purple">⏱ Υπερωρία</button>
+      </div>
+
+      <div class="card">
+        <h3>Οι τελευταίες παρουσίες</h3>
+        <div id="workerAttendance"></div>
+      </div>
+      <div class="card">
+        <h3>Οι υπερωρίες μου</h3>
+        <div id="workerOvertime"></div>
+      </div>
+      <div class="card">
+        <h3>Τα αιτήματά μου</h3>
+        <div id="workerRequests"></div>
+      </div>
+    </section>
+
+    <section id="adminView" class="hidden">
+      <div class="card">
+        <div class="row between">
+          <div>
+            <h2>Πίνακας διαχείρισης</h2>
+            <p class="muted">Παρουσίες, άδειες, υπερωρίες και εργαζόμενοι.</p>
+          </div>
+          <button id="refreshBtn" class="secondary small">Ανανέωση</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="attendanceTab">Παρουσίες</button>
+        <button class="tab" data-tab="requestsTab">Άδειες / Ρεπό</button>
+        <button class="tab" data-tab="overtimeTab">Υπερωρίες</button>
+        <button class="tab" data-tab="workersTab">Εργαζόμενοι</button>
+      </div>
+
+      <div id="attendanceTab" class="tabPanel card">
+        <h3>Εκκρεμείς και πρόσφατες παρουσίες</h3>
+        <div id="adminAttendance"></div>
+      </div>
+
+      <div id="requestsTab" class="tabPanel card hidden">
+        <h3>Αιτήματα άδειας / ρεπό</h3>
+        <div id="adminRequests"></div>
+      </div>
+
+      <div id="overtimeTab" class="tabPanel card hidden">
+        <h3>Υπερωρίες</h3>
+        <div id="adminOvertime"></div>
+      </div>
+
+      <div id="workersTab" class="tabPanel card hidden">
+        <h3>Εργαζόμενοι</h3>
+        <p class="muted">Οι νέοι χρήστες εμφανίζονται ως «Σε αναμονή» μέχρι να τους εγκρίνει διαχειριστής.</p>
+        <div id="adminWorkers"></div>
+      </div>
+    </section>
+
+    <div id="modal" class="modal hidden">
+      <div class="modalBox">
+        <button id="closeModal" class="close">×</button>
+        <h3 id="modalTitle">Αίτημα</h3>
+        <div id="modalBody"></div>
+      </div>
     </div>
+    <div id="toast" class="toast hidden"></div>
   </main>
 
-  <main id="worker" class="hidden">
-    <div class="welcome"><h2 id="workerName">Εργαζόμενος</h2><p>Τι θέλεις να καταχωρήσεις;</p></div>
-    <div class="grid">
-      <button class="big" onclick="action('attendance')">🟢<span>Ήρθα στη δουλειά</span></button>
-      <button class="big" onclick="action('overtime')">🕐<span>Υπερωρία</span></button>
-      <button class="big" onclick="action('dayoff')">🏖️<span>Ρεπό</span></button>
-      <button class="big" onclick="action('leave')">📅<span>Άδεια</span></button>
-    </div>
-    <div class="card"><h3>Οι καταχωρήσεις μου</h3><div id="myHistory"></div></div>
-  </main>
-
-  <main id="admin" class="hidden">
-    <div class="welcome"><h2>Πίνακας διαχειριστή</h2><p>Παρουσίες και αιτήματα εργαζομένων</p></div>
-    <div class="stats"><div><b id="pending">0</b><span>Εκκρεμή</span></div><div><b id="workersCount">0</b><span>Εργαζόμενοι</span></div><div><b id="days">0</b><span>Εγκεκριμένες παρουσίες</span></div></div>
-    <div class="card"><h3>Εκκρεμή αιτήματα</h3><div id="requests"></div></div>
-    <div class="card"><h3>Εργαζόμενοι</h3><div id="workers"></div></div>
-  </main>
-
-  <button id="logout" class="logout hidden" onclick="logout()">Αποσύνδεση</button>
-</div>
-<script src="app.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
