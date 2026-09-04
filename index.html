@@ -35,6 +35,16 @@
       <button id="signupBtn" class="secondary">Δημιουργία λογαριασμού εργαζομένου</button>
       <button id="resetBtn" class="linkBtn">Ξέχασα τον κωδικό</button>
       <div id="authMsg" class="msg"></div>
+      <div id="recoveryBox" class="recovery hidden">
+        <h3>Νέος κωδικός</h3>
+        <p class="muted">Βάλε τον νέο κωδικό σου δύο φορές.</p>
+        <label>Νέος κωδικός</label>
+        <input id="newPassword" type="password" autocomplete="new-password" placeholder="Νέος κωδικός">
+        <label>Επανάληψη κωδικού</label>
+        <input id="newPassword2" type="password" autocomplete="new-password" placeholder="Ξανά ο κωδικός">
+        <button id="savePasswordBtn" class="primary">Αποθήκευση νέου κωδικού</button>
+        <div id="recoveryMsg" class="msg"></div>
+      </div>
     </section>
 
     <section id="workerView" class="hidden">

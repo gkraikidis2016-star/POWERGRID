@@ -8,17 +8,64 @@ function setView(v){['authView','workerView','adminView'].forEach(x=>$(x).classL
 function modal(title,body){$('modalTitle').textContent=title;$('modalBody').innerHTML=body;$('modal').classList.remove('hidden')}
 $('closeModal').onclick=()=>$('modal').classList.add('hidden');
 
+let recoveryMode=false;
+
 async function init(){
   if(!window.POWERGRID_SUPABASE_URL || !window.POWERGRID_SUPABASE_KEY){$('configWarning').classList.remove('hidden'); return}
-  sb=window.supabase.createClient(window.POWERGRID_SUPABASE_URL,window.POWERGRID_SUPABASE_KEY);
+  sb=window.supabase.createClient(window.POWERGRID_SUPABASE_URL,window.POWERGRID_SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  const {data}=await sb.auth.getSession();
+  // When Supabase returns from a password-reset link, wait for the user to set a new password.
+  if(data.session && !recoveryMode) await loadUser(data.session.user);
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='PASSWORD_RECOVERY' && session){
+      recoveryMode=true;
+      showRecovery();
+      return;
+    }
+    if(session && !recoveryMode) await loadUser(session.user);
+    else if(!session && !recoveryMode){currentUser=null;currentProfile=null;setView('authView')}
+  });
+}
+
+function showRecovery(){
+  setView('authView');
+  $('recoveryBox').classList.remove('hidden');
+  $('authMsg').textContent='';
+  $('recoveryMsg').textContent='';
+  $('newPassword').value='';
+  $('newPassword2').value='';
+  $('newPassword').focus();
+}
+
+async function saveNewPassword(){
+  const p1=$('newPassword').value;
+  const p2=$('newPassword2').value;
+  if(p1.length<6) return $('recoveryMsg').textContent='Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες.';
+  if(p1!==p2) return $('recoveryMsg').textContent='Οι δύο κωδικοί δεν είναι ίδιοι.';
+  $('savePasswordBtn').disabled=true;
+  const {error}=await sb.auth.updateUser({password:p1});
+  $('savePasswordBtn').disabled=false;
+  if(error){$('recoveryMsg').textContent='Δεν έγινε η αλλαγή: '+error.message;return}
+  recoveryMode=false;
+  $('recoveryBox').classList.add('hidden');
+  $('recoveryMsg').textContent='';
+  toast('Ο κωδικός άλλαξε επιτυχώς.');
   const {data}=await sb.auth.getSession();
   if(data.session) await loadUser(data.session.user);
-  sb.auth.onAuthStateChange(async(event,session)=>{if(session) await loadUser(session.user); else {currentUser=null;currentProfile=null;setView('authView')}});
 }
+
+$('savePasswordBtn').onclick=saveNewPassword;
+
 async function loadUser(user){
   currentUser=user;
-  const {data,error}=await sb.from('profiles').select('*').eq('id',user.id).single();
-  if(error){msg(error.message);return}
+  const {data,error}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();
+  if(error){
+    console.error('POWERGRID profile load error:',error);
+    setView('authView');
+    msg('Δεν μπορώ να φορτώσω το προφίλ. Έλεγξε τη σύνδεση Supabase και τις πολιτικές RLS.');
+    return;
+  }
+  if(!data){setView('authView');msg('Ο λογαριασμός δημιουργήθηκε αλλά δεν βρέθηκε το προφίλ.');return}
   currentProfile=data;
   if(!data.active){setView('authView');msg('Ο λογαριασμός σου είναι σε αναμονή έγκρισης από διαχειριστή.');await sb.auth.signOut();return}
   if(data.role==='admin'){setView('adminView');await loadAdmin()}
